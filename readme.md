@@ -12,8 +12,8 @@ Insider version downloaded from UUP dump.
 ```
 
 ###### Compression options:
- * wim - standard compression
- * esd - solid compression
+ * wim - standard wim compression (`/Compress:max` in DISM)
+ * esd - solid esd compression (`/Compress:recovery` in DISM)
 
 ### Usage examples
  * `./convert.sh` - starts conversion using files from UUPs directory and
@@ -29,7 +29,7 @@ Insider version downloaded from UUP dump.
 This script uses the following commands to do its work:
  * cabextract - to extract cabs
  * wimlib-imagex - to export files from metadata ESD
- * chntpw - to modify registry of first index boot.wim
+ * chntpw - to modify registry of first index of boot.wim
  * genisoimage - to create ISO image
 
 If you use Debian or Ubuntu you can quickly install these using the following

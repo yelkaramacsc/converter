@@ -1,5 +1,5 @@
 #!/bin/bash
-scriptName="UUP Converter v0.1.0"
+scriptName="UUP Converter v0.1.1"
 
 editions="analogonecore
 andromeda
@@ -347,7 +347,7 @@ echo ""
 echo -e "$infoColor""Creating ISO structure...""$resetColor"
 wimlib-imagex apply "$firstMetadata" 1 ISODIR --no-acls 2>/dev/null
 if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to create ISODIR structure""$resetColor"
+  echo -e "$errorColor""Failed to create ISO structure""$resetColor"
   cleanup
   exit 1
 fi
