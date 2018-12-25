@@ -1,7 +1,7 @@
 #!/bin/bash
-scriptName="UUP Converter v0.1.1"
+scriptName="UUP Converter v0.2.0"
 
-editions="analogonecore
+editions='analogonecore
 andromeda
 cloude
 clouden
@@ -80,9 +80,9 @@ serverstorageworkgroupevalcore
 serverweb
 serverwebcore
 starter
-startern"
+startern'
 
-bootSourcesList="sources/alert.gif
+bootSourcesList='sources/alert.gif
 sources/api-ms-win-core-apiquery-l1-1-0.dll
 sources/api-ms-win-downlevel-advapi32-l1-1-0.dll
 sources/api-ms-win-downlevel-advapi32-l1-1-1.dll
@@ -221,7 +221,7 @@ sources/..-.*/wdsclient.dll.mui
 sources/..-.*/wdsimage.dll.mui
 sources/..-.*/wimprovider.dll.mui
 sources/..-.*/WinDlp.dll.mui
-sources/..-.*/winsetup.dll.mui"
+sources/..-.*/winsetup.dll.mui'
 
 infoColor="\033[1;94m"
 errorColor="\033[1;91m"
@@ -305,9 +305,9 @@ fi
 
 list=
 
-lang=$(echo "$metadataFiles" | grep _..-.*.esd | head -1 | sed 's/.*_//g;s/.esd//g')
-metadataFiles=$(echo "$metadataFiles" | grep "$lang" | sort | uniq)
-firstMetadata=$(echo "$metadataFiles" | head -1)
+lang=$(grep "_..-.*.esd" <<< "$metadataFiles" | head -1 | sed 's/.*_//g;s/.esd//g')
+metadataFiles=$(grep "$lang" <<< "$metadataFiles" | sort | uniq)
+firstMetadata=$(head -1 <<< "$metadataFiles")
 
 tempDir=`mktemp -d`
 extractDir="$tempDir/extract"
@@ -354,7 +354,10 @@ fi
 
 echo ""
 echo -e "$infoColor""Exporting winre.wim...""$resetColor"
-wimlib-imagex export "$firstMetadata" 2 "$tempDir/winre.wim" --compress=maximum --boot
+
+wimlib-imagex export "$firstMetadata" 2 "$tempDir/winre.wim" \
+  --compress=maximum --boot
+
 if [ $? != 0 ]; then
   echo -e "$errorColor""Failed to export winre.wim""$resetColor"
   cleanup
@@ -364,27 +367,48 @@ fi
 echo ""
 echo -e "$infoColor""Creating boot.wim...""$resetColor"
 cp "$tempDir/winre.wim" ISODIR/sources/boot.wim
-wimlib-imagex info ISODIR/sources/boot.wim 1 "Microsoft Windows PE" --image-property FLAGS=9 >/dev/null
 
-wimlib-imagex extract ISODIR/sources/boot.wim 1 --dest-dir="$tempDir" "/Windows/System32/config/SOFTWARE" --no-acls >/dev/null
+wimlib-imagex info ISODIR/sources/boot.wim 1 "Microsoft Windows PE" \
+  --image-property FLAGS=9 >/dev/null
+
+wimlib-imagex extract ISODIR/sources/boot.wim 1 --dest-dir="$tempDir" \
+  "/Windows/System32/config/SOFTWARE" --no-acls >/dev/null
+
 if [ $? != 0 ]; then
   echo -e "$errorColor""Failed to extract registry""$resetColor"
   cleanup
   exit 1
 fi
 
-echo -e "cd Microsoft\\Windows NT\\CurrentVersion\nnv 1 SystemRoot\ned SystemRoot\nX:\\\$Windows.~bt\\Windows\ncd WinPE\nnv 1 InstRoot\ned InstRoot\nX:\\\$Windows.~bt\nq\ny\n" | chntpw -e "$tempDir/SOFTWARE" >/dev/null
-wimlib-imagex update ISODIR/sources/boot.wim 1 --command "add $tempDir/SOFTWARE /Windows/System32/config/SOFTWARE" >/dev/null
-wimlib-imagex update ISODIR/sources/boot.wim 1 --command "delete /Windows/System32/winpeshl.ini" >/dev/null
+echo 'cd Microsoft\Windows NT\CurrentVersion
+nv 1 SystemRoot
+ed SystemRoot
+X:\$Windows.~bt\Windows
+cd WinPE
+nv 1 InstRoot
+ed InstRoot
+X:\$Windows.~bt
+q
+y' | chntpw -e "$tempDir/SOFTWARE" >/dev/null
 
-wimlib-imagex export "$tempDir/winre.wim" 1 ISODIR/sources/boot.wim "Microsoft Windows Setup"
+wimlib-imagex update ISODIR/sources/boot.wim 1 \
+  --command "add $tempDir/SOFTWARE /Windows/System32/config/SOFTWARE" >/dev/null
+
+wimlib-imagex update ISODIR/sources/boot.wim 1 \
+  --command "delete /Windows/System32/winpeshl.ini" >/dev/null
+
+wimlib-imagex export "$tempDir/winre.wim" 1 \
+  ISODIR/sources/boot.wim "Microsoft Windows Setup"
+
 if [ $? != 0 ]; then
   echo -e "$errorColor""Failed to create second index of boot.wim""$resetColor"
   cleanup
   exit 1
 fi
 
-wimlib-imagex extract "$firstMetadata" 3 "/Windows/System32/xmllite.dll" --no-acls --dest-dir="ISODIR/sources" >/dev/null
+wimlib-imagex extract "$firstMetadata" 3 "/Windows/System32/xmllite.dll" \
+  --no-acls --dest-dir="ISODIR/sources" >/dev/null
+
 wimlib-imagex info ISODIR/sources/boot.wim 2 --image-property FLAGS=2 >/dev/null
 wimlib-imagex info ISODIR/sources/boot.wim 2 --boot >/dev/null
 
@@ -405,7 +429,7 @@ done
 
 wimlib-imagex update ISODIR/sources/boot.wim 2 <"$tempDir/update.txt" >/dev/null
 if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed add required files to second index of boot.wim""$resetColor"
+  echo -e "$errorColor""Failed to add required files to second index of boot.wim""$resetColor"
   cleanup
   exit 1
 fi
@@ -414,34 +438,65 @@ wimlib-imagex optimize ISODIR/sources/boot.wim
 rm "ISODIR/sources/xmllite.dll"
 
 echo ""
-echo -e "$infoColor""Creating install.$type...""$resetColor"
+indexesExported=0
 for metadata in $metadataFiles; do
-  metadataName=`basename $metadata .esd`
-  echo -e "$infoColor""Exporting $metadataName...""$resetColor"
-  wimlib-imagex export "$metadata" 3 ISODIR/sources/install.$type "$metadataName" $compressParam --ref="$uupDir/*.esd" --ref "$tempDir/*.esd"
+  currentInfo=`wimlib-imagex info "$metadata" 3`
+
+  currentEdition=`grep -i "^Edition ID:" <<< "$currentInfo" | sed "s/.*  //g"`
+  editionName="Windows 10 $currentEdition"
+
+  echo -e "$infoColor""Exporting $editionName to install.$type...""$resetColor"
+
+  wimlib-imagex export "$metadata" 3 ISODIR/sources/install.$type \
+    "$editionName" $compressParam --ref="$uupDir/*.esd" --ref "$tempDir/*.esd"
+
   if [ $? != 0 ]; then
-    echo -e "$errorColor""Failed export index to install.$type""$resetColor"
+    echo -e "$errorColor""Failed to export $editionName to install.$type""$resetColor"
     cleanup
     exit 1
   fi
 
+  let indexesExported++
+
   echo ""
-  echo -e "$infoColor""Adding winre.wim for $metadataName...""$resetColor"
-  wimlib-imagex update ISODIR/sources/install.$type 1 --command "add $tempDir/winre.wim /Windows/System32/Recovery/winre.wim"
+  echo -e "$infoColor""Adding winre.wim for $editionName...""$resetColor"
+  wimlib-imagex update ISODIR/sources/install.$type $indexesExported \
+    --command "add $tempDir/winre.wim /Windows/System32/Recovery/winre.wim"
+
   echo ""
 done
 
 info=`wimlib-imagex info "$firstMetadata" 3`
-major=`echo "$info" | grep -i "^Major Version:" | sed "s/.*  //g"`
-minor=`echo "$info" | grep -i "^Minor Version:" | sed "s/.*  //g"`
-build=`echo "$info" | grep -i "^Build:" | sed "s/.*  //g"`
-spbuild=`echo "$info" | grep -i "^Service Pack Build:" | sed "s/.*  //g"`
-label="$major.$minor.$build.$spbuild""_$lang"
+build=`grep -i "^Build:" <<< "$info" | sed "s/.*  //g"`
+spbuild=`grep -i "^Service Pack Build:" <<< "$info" | sed "s/.*  //g"`
+arch=`grep -i "^Architecture:" <<< "$info" | sed "s/.*  //g"`
+
+if [ "$arch" == "x86_64" ]; then
+  arch="x64"
+fi
+
+if [ $indexesExported -gt 1 ]; then
+  isoEdition="MULTI"
+else
+  isoEdition=`grep -i "^Edition ID:" <<< "$info" | sed "s/.*  //g"`
+fi
+
+isoLabel=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}_${arch}_${lang}"`
+isoName=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}_${isoEdition}_${arch}_${lang}.iso"`
+
+if [ -e "$isoName" ]; then
+  rm "$isoName"
+fi
 
 echo -e "$infoColor""Creating ISO image...""$resetColor"
-genisoimage -b "boot/etfsboot.com" --no-emul-boot --eltorito-alt-boot -e "efi/microsoft/boot/efisys.bin" --no-emul-boot --udf --hide "*" -V "$label" -o "$label.iso"  ISODIR
+find ISODIR -exec touch {} +
+
+genisoimage -b "boot/etfsboot.com" --no-emul-boot \
+  --eltorito-alt-boot -e "efi/microsoft/boot/efisys.bin" --no-emul-boot \
+  --udf --hide "*" -V "$isoLabel" -o "$isoName" ISODIR
+
 if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to create ISO""$resetColor"
+  echo -e "$errorColor""Failed to create ISO image""$resetColor"
   cleanup
   exit 1
 fi
