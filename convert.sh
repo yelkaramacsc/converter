@@ -1,5 +1,5 @@
 #!/bin/bash
-scriptName="UUP Converter v0.2.0"
+scriptName="UUP Converter v0.3.0"
 
 editions='analogonecore
 andromeda
@@ -240,16 +240,16 @@ fi
 if ! which cabextract >/dev/null \
 || ! which wimlib-imagex >/dev/null \
 || ! which chntpw >/dev/null \
-|| ! which genisoimage >/dev/null; then
+|| ! which xorriso >/dev/null; then
   echo "One of required applications is not installed."
   echo "The following applications need to be installed to use this script:"
   echo " - cabextract"
   echo " - wimlib-imagex"
   echo " - chntpw"
-  echo " - genisoimage"
+  echo " - xorriso"
   echo ""
   echo "If you use Debian or Ubuntu you can install these using:"
-  echo "sudo apt-get install cabextract wimtools chntpw genisoimage"
+  echo "sudo apt-get install cabextract wimtools chntpw xorriso"
   exit 1
 fi
 
@@ -481,7 +481,7 @@ else
   isoEdition=`grep -i "^Edition ID:" <<< "$info" | sed "s/.*  //g"`
 fi
 
-isoLabel=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}_${arch}_${lang}"`
+isoLabel=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}"`
 isoName=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}_${isoEdition}_${arch}_${lang}.iso"`
 
 if [ -e "$isoName" ]; then
@@ -491,9 +491,9 @@ fi
 echo -e "$infoColor""Creating ISO image...""$resetColor"
 find ISODIR -exec touch {} +
 
-genisoimage -b "boot/etfsboot.com" --no-emul-boot \
+xorriso -as mkisofs -b "boot/etfsboot.com" --no-emul-boot \
   --eltorito-alt-boot -e "efi/microsoft/boot/efisys.bin" --no-emul-boot \
-  --udf --hide "*" -V "$isoLabel" -o "$isoName" ISODIR
+  -J -joliet-long -V "$isoLabel" -o "$isoName" ISODIR
 
 if [ $? != 0 ]; then
   echo -e "$errorColor""Failed to create ISO image""$resetColor"
