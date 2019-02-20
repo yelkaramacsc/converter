@@ -1,5 +1,5 @@
 #!/bin/bash
-scriptName="UUP Converter v0.3.0"
+scriptName="UUP Converter v0.4.0"
 
 editions='analogonecore
 andromeda
@@ -240,16 +240,16 @@ fi
 if ! which cabextract >/dev/null \
 || ! which wimlib-imagex >/dev/null \
 || ! which chntpw >/dev/null \
-|| ! which xorriso >/dev/null; then
+|| ! which genisoimage >/dev/null; then
   echo "One of required applications is not installed."
   echo "The following applications need to be installed to use this script:"
   echo " - cabextract"
   echo " - wimlib-imagex"
   echo " - chntpw"
-  echo " - xorriso"
+  echo " - genisoimage"
   echo ""
   echo "If you use Debian or Ubuntu you can install these using:"
-  echo "sudo apt-get install cabextract wimtools chntpw xorriso"
+  echo "sudo apt-get install cabextract wimtools chntpw genisoimage"
   exit 1
 fi
 
@@ -305,8 +305,8 @@ fi
 
 list=
 
-lang=$(grep "_..-.*.esd" <<< "$metadataFiles" | head -1 | sed 's/.*_//g;s/.esd//g')
-metadataFiles=$(grep "$lang" <<< "$metadataFiles" | sort | uniq)
+lang=$(grep -i "_..-.*.esd" <<< "$metadataFiles" | head -1 | sed 's/.*_//g;s/.esd//gi')
+metadataFiles=$(grep -i "$lang" <<< "$metadataFiles" | sort | uniq)
 firstMetadata=$(head -1 <<< "$metadataFiles")
 
 tempDir=`mktemp -d`
@@ -314,7 +314,7 @@ extractDir="$tempDir/extract"
 
 echo -e "\033[1m$scriptName\033[0m"
 
-for file in `find "$uupDir" -type f -name "*.cab"`; do
+for file in `find "$uupDir" -type f -iname "*.cab"`; do
   fileName=`basename $file .cab`
   echo -e "$infoColor""CAB -> ESD:""$resetColor"" $fileName"
 
@@ -481,7 +481,7 @@ else
   isoEdition=`grep -i "^Edition ID:" <<< "$info" | sed "s/.*  //g"`
 fi
 
-isoLabel=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}"`
+isoLabel=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}_${arch}_${lang}"`
 isoName=`tr "[:lower:]" "[:upper:]" <<< "${build}.${spbuild}_${isoEdition}_${arch}_${lang}.iso"`
 
 if [ -e "$isoName" ]; then
@@ -491,9 +491,9 @@ fi
 echo -e "$infoColor""Creating ISO image...""$resetColor"
 find ISODIR -exec touch {} +
 
-xorriso -as mkisofs -b "boot/etfsboot.com" --no-emul-boot \
-  --eltorito-alt-boot -e "efi/microsoft/boot/efisys.bin" --no-emul-boot \
-  -J -joliet-long -V "$isoLabel" -o "$isoName" ISODIR
+genisoimage -b "boot/etfsboot.com" --no-emul-boot \
+  --eltorito-alt-boot -b "efi/microsoft/boot/efisys.bin" --no-emul-boot \
+  --udf --hide "*" -V "$isoLabel" -o "$isoName" ISODIR
 
 if [ $? != 0 ]; then
   echo -e "$errorColor""Failed to create ISO image""$resetColor"

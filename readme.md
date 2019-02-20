@@ -33,13 +33,13 @@ This script uses the following commands to do its work:
  * cabextract - to extract cabs
  * wimlib-imagex - to export files from metadata ESD
  * chntpw - to modify registry of first index of boot.wim
- * xorriso - to create ISO image
+ * genisoimage - to create ISO image
 
 If you use Debian or Ubuntu based distribution you can quickly install these
 using the following command:
 
 ```
-sudo apt-get install cabextract wimtools chntpw xorriso
+sudo apt-get install cabextract wimtools chntpw genisoimage
 ```
 
 If you use any other distribution, then you will need to check its repository
