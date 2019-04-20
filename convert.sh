@@ -1,5 +1,5 @@
 #!/bin/bash
-scriptName="UUP Converter v0.4.0"
+scriptName="UUP Converter v0.4.1"
 
 editions='analogonecore
 andromeda
@@ -395,6 +395,9 @@ wimlib-imagex update ISODIR/sources/boot.wim 1 \
   --command "add $tempDir/SOFTWARE /Windows/System32/config/SOFTWARE" >/dev/null
 
 wimlib-imagex update ISODIR/sources/boot.wim 1 \
+  --command "add ISODIR/sources/background_cli.bmp /Windows/system32/winre.jpg" >/dev/null
+
+wimlib-imagex update ISODIR/sources/boot.wim 1 \
   --command "delete /Windows/System32/winpeshl.ini" >/dev/null
 
 wimlib-imagex export "$tempDir/winre.wim" 1 \
@@ -423,6 +426,7 @@ list=
 echo "delete /Windows/System32/winpeshl.ini" >"$tempDir/update.txt"
 echo "add ISODIR/setup.exe /setup.exe" >>"$tempDir/update.txt"
 echo "add ISODIR/sources/background_cli.bmp /sources/background.bmp" >>"$tempDir/update.txt"
+echo "add ISODIR/sources/background_cli.bmp /Windows/system32/winre.jpg" >>"$tempDir/update.txt"
 for i in $files; do
     echo "add ISODIR/$i /$i" >>"$tempDir/update.txt"
 done
