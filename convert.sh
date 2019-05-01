@@ -3,7 +3,7 @@ scriptName="UUP Converter v0.5.0"
 UUP_CONVERTER_SCRIPT=1
 
 if [ -f `pwd`/convert_ve_plugin ]; then
-. `pwd`/convert_ve_plugin
+  . `pwd`/convert_ve_plugin
 fi
 
 if [ -f `pwd`/convert_config_linux ]; then
