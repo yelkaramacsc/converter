@@ -1,5 +1,18 @@
 #!/bin/bash
-scriptName="UUP Converter v0.4.1"
+scriptName="UUP Converter v0.5.0"
+UUP_CONVERTER_SCRIPT=1
+
+if [ -f `pwd`/convert_ve_plugin ]; then
+. `pwd`/convert_ve_plugin
+fi
+
+if [ -f `pwd`/convert_config_linux ]; then
+  . `pwd`/convert_config_linux
+else
+  VIRTUAL_EDITIONS_LIST="CoreSingleLanguage Enterprise EnterpriseN Education \
+  EducationN ProfessionalEducation ProfessionalEducationN \
+  ProfessionalWorkstation ProfessionalWorkstationN ServerRdsh IoTEnterprise"
+fi
 
 editions='analogonecore
 andromeda
@@ -229,18 +242,35 @@ resetColor="\033[0m"
 
 if [ "$1" == "-?" -o "$1" == "--help" -o "$1" == "-h" ]; then
   echo "Usage:"
-  echo "$0 [compression] [uups_directory]"
+  echo "$0 [compression] [uups_directory] [create_virtual_editions]"
   echo ""
-  echo "Compression options:"
-  echo "wim - standard compression"
+  echo -e "${infoColor}compression options:${resetColor}"
+  echo "wim - standard compression (default)"
   echo "esd - solid compression"
+  echo ""
+  echo -e "${infoColor}create_virtual_editions options:${resetColor}"
+  echo "0 - do not create virtual editions (default)"
+  echo "1 - create virtual edtitions"
+  echo ""
+  echo -e "${infoColor}convert_config_linux file${resetColor}"
+  echo "This file can be used to configure some advanced options of this script."
+  echo "It is required to place configuration in the same directory as script."
+  echo ""
+  echo "Possible configuration options:"
+  echo "VIRTUAL_EDITIONS_LIST='space delimited editions sequence'"
+  echo ""
+  echo -e "${infoColor}List of editions created if you enable virtual edtitions creation:${resetColor}"
+  for edition in $VIRTUAL_EDITIONS_LIST; do
+    echo "- $edition"
+  done
+  echo "When VIRTUAL_EDITIONS_LIST is not configured, this list contains all editions."
   exit
 fi
 
-if ! which cabextract >/dev/null \
-|| ! which wimlib-imagex >/dev/null \
-|| ! which chntpw >/dev/null \
-|| ! which genisoimage >/dev/null; then
+if ! which cabextract >/dev/null 2>&1 \
+|| ! which wimlib-imagex >/dev/null 2>&1 \
+|| ! which chntpw >/dev/null 2>&1 \
+|| ! which genisoimage >/dev/null 2>&1; then
   echo "One of required applications is not installed."
   echo "The following applications need to be installed to use this script:"
   echo " - cabextract"
@@ -271,6 +301,12 @@ else
   uupDir="UUPs"
 fi
 
+if ! [ -z $3 ]; then
+  runVirtualEditions="$3"
+else
+  runVirtualEditions=0
+fi
+
 if ! [ -d "$uupDir" ]; then
   echo -e "$errorColor""Specified directory containing UUP files does not exist!""$resetColor"
   exit 1
@@ -286,6 +322,14 @@ fi
 function cleanup() {
   rm -rf ISODIR
   rm -rf "$tempDir"
+}
+
+function errorHandler() {
+  if [ $1 != 0 ]; then
+    echo -e "${errorColor}$2${resetColor}"
+    cleanup
+    exit 1
+  fi
 }
 
 if [ -e ISODIR ]; then
@@ -314,24 +358,21 @@ extractDir="$tempDir/extract"
 
 echo -e "\033[1m$scriptName\033[0m"
 
+if [ $runVirtualEditions -eq 1 ] && [ "$VIRTUAL_EDITIONS_PLUGIN_LOADED" != "1" ]; then
+  echo "Virtual editions will be not created, because plugin isn't loaded."
+  runVirtualEditions=0
+fi
+
 for file in `find "$uupDir" -type f -iname "*.cab"`; do
   fileName=`basename $file .cab`
   echo -e "$infoColor""CAB -> ESD:""$resetColor"" $fileName"
 
   mkdir "$extractDir"
   cabextract -d "$extractDir" "$file" >/dev/null 2>/dev/null
-  if [ $? != 0 ]; then
-    echo -e -e "$errorColor""Failed to extract $fileName.cab""$resetColor"
-    cleanup
-    exit 1
-  fi
+  errorHandler $? "Failed to extract $fileName.cab"
 
   wimlib-imagex capture "$extractDir" "$tempDir/$fileName.esd" >/dev/null
-  if [ $? != 0 ]; then
-    echo -e "$errorColor""Failed to create $fileName.esd""$resetColor"
-    cleanup
-    exit 1
-  fi
+  errorHandler $? "Failed to create $fileName.esd"
 
   rm -rf "$extractDir"
 done
@@ -345,12 +386,9 @@ mkdir ISODIR
 
 echo ""
 echo -e "$infoColor""Creating ISO structure...""$resetColor"
+
 wimlib-imagex apply "$firstMetadata" 1 ISODIR --no-acls 2>/dev/null
-if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to create ISO structure""$resetColor"
-  cleanup
-  exit 1
-fi
+errorHandler $? "Failed to create ISO structure"
 
 echo ""
 echo -e "$infoColor""Exporting winre.wim...""$resetColor"
@@ -358,11 +396,7 @@ echo -e "$infoColor""Exporting winre.wim...""$resetColor"
 wimlib-imagex export "$firstMetadata" 2 "$tempDir/winre.wim" \
   --compress=maximum --boot
 
-if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to export winre.wim""$resetColor"
-  cleanup
-  exit 1
-fi
+errorHandler $? "Failed to export winre.wim"
 
 echo ""
 echo -e "$infoColor""Creating boot.wim...""$resetColor"
@@ -374,11 +408,7 @@ wimlib-imagex info ISODIR/sources/boot.wim 1 "Microsoft Windows PE" \
 wimlib-imagex extract ISODIR/sources/boot.wim 1 --dest-dir="$tempDir" \
   "/Windows/System32/config/SOFTWARE" --no-acls >/dev/null
 
-if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to extract registry""$resetColor"
-  cleanup
-  exit 1
-fi
+errorHandler $? "Failed to extract registry"
 
 echo 'cd Microsoft\Windows NT\CurrentVersion
 nv 1 SystemRoot
@@ -403,11 +433,7 @@ wimlib-imagex update ISODIR/sources/boot.wim 1 \
 wimlib-imagex export "$tempDir/winre.wim" 1 \
   ISODIR/sources/boot.wim "Microsoft Windows Setup"
 
-if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to create second index of boot.wim""$resetColor"
-  cleanup
-  exit 1
-fi
+errorHandler $? "Failed to create second index of boot.wim"
 
 wimlib-imagex extract "$firstMetadata" 3 "/Windows/System32/xmllite.dll" \
   --no-acls --dest-dir="ISODIR/sources" >/dev/null
@@ -432,11 +458,7 @@ for i in $files; do
 done
 
 wimlib-imagex update ISODIR/sources/boot.wim 2 <"$tempDir/update.txt" >/dev/null
-if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to add required files to second index of boot.wim""$resetColor"
-  cleanup
-  exit 1
-fi
+errorHandler $? "Failed to add required files to second index of boot.wim"
 
 wimlib-imagex optimize ISODIR/sources/boot.wim
 rm "ISODIR/sources/xmllite.dll"
@@ -454,11 +476,7 @@ for metadata in $metadataFiles; do
   wimlib-imagex export "$metadata" 3 ISODIR/sources/install.$type \
     "$editionName" $compressParam --ref="$uupDir/*.esd" --ref "$tempDir/*.esd"
 
-  if [ $? != 0 ]; then
-    echo -e "$errorColor""Failed to export $editionName to install.$type""$resetColor"
-    cleanup
-    exit 1
-  fi
+  errorHandler $? "Failed to export $editionName to install.$type""$resetColor"
 
   let indexesExported++
 
@@ -472,6 +490,25 @@ done
 
 info=`wimlib-imagex info "$firstMetadata" 3`
 build=`grep -i "^Build:" <<< "$info" | sed "s/.*  //g"`
+
+addedVirtualEditions=0
+if [ $runVirtualEditions -eq 1 ] && [ $build -ge 17063 ]; then
+  echo -e "$infoColor""Creating virtual editions...""$resetColor"
+  for virtualEdition in $VIRTUAL_EDITIONS_LIST; do
+    echo -e "$infoColor""Adding $virtualEdition edition...""$resetColor"
+    createVirtualEdition "$virtualEdition"
+    error=$?
+    if [ $error -ne 1 ]; then
+      errorHandler $error "Failed to create virtual edition"
+      let addedVirtualEditions++
+    fi
+    echo ""
+  done
+elif [ $build -lt 17063 ]; then
+  echo "Virtual editions creation requires build 17063 or later"
+fi
+
+let indexesSum=$addedVirtualEditions+$indexesExported
 spbuild=`grep -i "^Service Pack Build:" <<< "$info" | sed "s/.*  //g"`
 arch=`grep -i "^Architecture:" <<< "$info" | sed "s/.*  //g"`
 
@@ -479,7 +516,7 @@ if [ "$arch" == "x86_64" ]; then
   arch="x64"
 fi
 
-if [ $indexesExported -gt 1 ]; then
+if [ $indexesSum -gt 1 ]; then
   isoEdition="MULTI"
 else
   isoEdition=`grep -i "^Edition ID:" <<< "$info" | sed "s/.*  //g"`
@@ -492,6 +529,10 @@ if [ -e "$isoName" ]; then
   rm "$isoName"
 fi
 
+echo -e "$infoColor""Optimizing install.$type...""$resetColor"
+wimlib-imagex optimize ISODIR/sources/install.$type
+echo ""
+
 echo -e "$infoColor""Creating ISO image...""$resetColor"
 find ISODIR -exec touch {} +
 
@@ -499,11 +540,7 @@ genisoimage -b "boot/etfsboot.com" --no-emul-boot \
   --eltorito-alt-boot -b "efi/microsoft/boot/efisys.bin" --no-emul-boot \
   --udf --hide "*" -V "$isoLabel" -o "$isoName" ISODIR
 
-if [ $? != 0 ]; then
-  echo -e "$errorColor""Failed to create ISO image""$resetColor"
-  cleanup
-  exit 1
-fi
+errorHandler $? "Failed to create ISO image""$resetColor"
 
 cleanup
 echo -e "\033[1;92mDone.""$resetColor"

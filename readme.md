@@ -11,12 +11,16 @@ Updates to created images.
 
 ### Usage
 ```
-./convert.sh [compression] [uups_directory]
+./convert.sh [compression] [uups_directory] [create_virtual_editions]
 ```
 
-###### Compression options:
- * wim - standard wim compression (`/Compress:max` in DISM)
+###### compression options:
+ * wim - standard wim compression (`/Compress:max` in DISM) (default)
  * esd - solid esd compression (`/Compress:recovery` in DISM)
+
+###### create_virtual_editions options:
+ * 0 - do not create virtual editions (default)
+ * 1 - create virtual edtitions
 
 ### Usage examples
  * `./convert.sh` - starts the conversion using files from `UUPs` directory and
@@ -27,6 +31,35 @@ Updates to created images.
 
  * `./convert.sh wim MyUUP` - starts the conversion using files from `MyUUP`
    directory and creates an ISO image with `install.wim`
+
+ * `./convert.sh wim MyUUP 1` - starts the conversion using files from `MyUUP`
+   directory, creates virtual editions and creates an ISO image with
+   `install.wim`
+
+### Virtual editions
+Since version 0.5.0 this script supports creation of virtual editions.
+To run creation of all virtial editions simply use create_virtual_editions
+switch in command line. If you want to customize which editions will be created
+when this switch is set, please use VIRTUAL_EDITIONS_LIST in configuration file.
+
+Virtual editions creation can be only done when convert_ve_plugin is present in
+the same directory as converter.
+
+Thanks to abbodi1406 for providing information which allowed creation of this
+option.
+
+### Configuration file
+Configuration of advanced script options can be modified using
+convert_config_linux file.
+
+###### Configuration options
+```
+VIRTUAL_EDITIONS_LIST='space delimited editions sequence'
+```
+
+###### Configuration options explanation
+ * VIRTUAL_EDITIONS_LIST - configures which editions will be created when
+   create_virtual_editions is enabled.
 
 ### Requirements
 This script uses the following commands to do its work:
