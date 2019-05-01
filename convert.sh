@@ -1,13 +1,13 @@
 #!/bin/bash
-scriptName="UUP Converter v0.5.0"
+scriptName="UUP Converter v0.5.1"
 UUP_CONVERTER_SCRIPT=1
 
-if [ -f `pwd`/convert_ve_plugin ]; then
-  . `pwd`/convert_ve_plugin
+if [ -f `dirname $0`/convert_ve_plugin ]; then
+  . `dirname $0`/convert_ve_plugin
 fi
 
-if [ -f `pwd`/convert_config_linux ]; then
-  . `pwd`/convert_config_linux
+if [ -f `dirname $0`/convert_config_linux ]; then
+  . `dirname $0`/convert_config_linux
 else
   VIRTUAL_EDITIONS_LIST="CoreSingleLanguage Enterprise EnterpriseN Education \
   EducationN ProfessionalEducation ProfessionalEducationN \
