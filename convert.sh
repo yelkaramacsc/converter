@@ -546,8 +546,8 @@ wimlib-imagex optimize ISODIR/sources/install.$type
 echo ""
 
 if [ $build -ge 18890 ]; then
-    chntpw -e ISODIR/boot/bcd <<< "$bcdPatch" >/dev/null
-    chntpw -e ISODIR/efi/microsoft/boot/bcd <<< "$bcdPatch" >/dev/null
+  chntpw -e ISODIR/boot/bcd <<< "$bcdPatch" >/dev/null
+  chntpw -e ISODIR/efi/microsoft/boot/bcd <<< "$bcdPatch" >/dev/null
 fi
 
 echo -e "$infoColor""Creating ISO image...""$resetColor"
