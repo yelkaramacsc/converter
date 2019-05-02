@@ -1,5 +1,5 @@
 #!/bin/bash
-scriptName="UUP Converter v0.5.1"
+scriptName="UUP Converter v0.5.2"
 UUP_CONVERTER_SCRIPT=1
 
 if [ -f `dirname $0`/convert_ve_plugin ]; then
