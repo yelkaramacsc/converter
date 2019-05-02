@@ -1,5 +1,5 @@
 #!/bin/bash
-scriptName="UUP Converter v0.5.3"
+scriptName="UUP Converter v0.5.4"
 UUP_CONVERTER_SCRIPT=1
 
 if [ -f `dirname $0`/convert_ve_plugin ]; then
@@ -402,9 +402,6 @@ echo -e "$infoColor""Creating ISO structure...""$resetColor"
 wimlib-imagex apply "$firstMetadata" 1 ISODIR --no-acls 2>/dev/null
 errorHandler $? "Failed to create ISO structure"
 
-chntpw -e ISODIR/boot/bcd <<< "$bcdPatch" >/dev/null
-chntpw -e ISODIR/efi/microsoft/boot/bcd <<< "$bcdPatch" >/dev/null
-
 echo ""
 echo -e "$infoColor""Exporting winre.wim...""$resetColor"
 
@@ -547,6 +544,11 @@ fi
 echo -e "$infoColor""Optimizing install.$type...""$resetColor"
 wimlib-imagex optimize ISODIR/sources/install.$type
 echo ""
+
+if [ $build -ge 18890 ]; then
+    chntpw -e ISODIR/boot/bcd <<< "$bcdPatch" >/dev/null
+    chntpw -e ISODIR/efi/microsoft/boot/bcd <<< "$bcdPatch" >/dev/null
+fi
 
 echo -e "$infoColor""Creating ISO image...""$resetColor"
 find ISODIR -exec touch {} +
