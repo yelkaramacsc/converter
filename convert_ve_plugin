@@ -1126,8 +1126,8 @@ s
 nv 1 ProductId
 ed ProductId
 $3
-nv 1 EditionId
-ed EditionId
+nv 1 EditionID
+ed EditionID
 $4
 cd \\
 cd \Microsoft\Windows NT\CurrentVersion\DefaultProductKey2

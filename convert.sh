@@ -1,5 +1,5 @@
 #!/bin/bash
-scriptName="UUP Converter v0.5.2"
+scriptName="UUP Converter v0.5.3"
 UUP_CONVERTER_SCRIPT=1
 
 if [ -f `dirname $0`/convert_ve_plugin ]; then
@@ -236,6 +236,18 @@ sources/..-.*/wimprovider.dll.mui
 sources/..-.*/WinDlp.dll.mui
 sources/..-.*/winsetup.dll.mui'
 
+bcdPatch='cd \Objects\{7619dcc9-fafe-11d9-b411-000476eba25f}\Elements
+nk 250000c2
+cd 250000c2
+nv 3 Element
+ed Element
+8
+:00000  00 00 00 00 00 00 00 00
+s
+q
+y
+'
+
 infoColor="\033[1;94m"
 errorColor="\033[1;91m"
 resetColor="\033[0m"
@@ -389,6 +401,9 @@ echo -e "$infoColor""Creating ISO structure...""$resetColor"
 
 wimlib-imagex apply "$firstMetadata" 1 ISODIR --no-acls 2>/dev/null
 errorHandler $? "Failed to create ISO structure"
+
+chntpw -e ISODIR/boot/bcd <<< "$bcdPatch" >/dev/null
+chntpw -e ISODIR/efi/microsoft/boot/bcd <<< "$bcdPatch" >/dev/null
 
 echo ""
 echo -e "$infoColor""Exporting winre.wim...""$resetColor"
