@@ -45,7 +45,7 @@ when this switch is set, please use VIRTUAL_EDITIONS_LIST in configuration file.
 Virtual editions creation can be only done when convert_ve_plugin is present in
 the same directory as converter.
 
-Thanks to abbodi1406 for providing information which allowed creation of this
+Thanks to abbodi1406 for providing informations which helped with creating this
 option.
 
 ### Configuration file
